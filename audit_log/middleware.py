@@ -1,5 +1,6 @@
 from django.db.models import signals
 from django.utils.functional import curry
+from django.utils.timezone import now
 
 from audit_log import registration, settings
 from audit_log.models import fields
@@ -75,6 +76,15 @@ class UserLoggingMiddleware(object):
             if sender in registry:
                 for field in registry.get_fields(sender):
                     setattr(instance, field.name, session)
+                    _disable_audit_log_managers(instance)
+                    instance.save()
+                    _enable_audit_log_managers(instance)
+
+
+            registry = registration.FieldRegistry(fields.CreatingDateTimeField)
+            if sender in registry:
+                for field in registry.get_fields(sender):
+                    setattr(instance, field.name, now())
                     _disable_audit_log_managers(instance)
                     instance.save()
                     _enable_audit_log_managers(instance)

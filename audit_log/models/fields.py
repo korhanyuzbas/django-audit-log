@@ -18,6 +18,7 @@ class LastUserField(models.ForeignKey):
         registry = registration.FieldRegistry(self.__class__)
         registry.add_field(cls, self)
 
+
 class LastSessionKeyField(models.CharField):
     """
     A field that keeps a reference to the last session key that was used to access the model.
@@ -31,6 +32,21 @@ class LastSessionKeyField(models.CharField):
         registry = registration.FieldRegistry(self.__class__)
         registry.add_field(cls, self)
 
+
+class LastDateTimeField(models.DateTimeField):
+    """
+    A field that keeps last update date time of the model.
+    """
+
+    def __init__(self, null=True, auto_now=True, editable = False, **kwargs):
+        super(LastDateTimeField, self).__init__(null = null, auto_now=auto_now, editable = editable, **kwargs)
+
+    def contribute_to_class(self, cls, name):
+        super(LastDateTimeField, self).contribute_to_class(cls, name)
+        registry = registration.FieldRegistry(self.__class__)
+        registry.add_field(cls, self)
+
+
 class CreatingUserField(LastUserField):
     """
     A field that keeps track of the user that created a model instance.
@@ -40,6 +56,7 @@ class CreatingUserField(LastUserField):
     #the different logic goes in the middleware
     pass
 
+
 class CreatingSessionKeyField(LastSessionKeyField):
     """
     A field that keeps track of the last session key with which a model instance was created.
@@ -48,6 +65,12 @@ class CreatingSessionKeyField(LastSessionKeyField):
     #dont actually need to do anything, everything is handled by the parent class
     #the different logic goes in the middleware
     pass
+
+
+class CreatingDateTimeField(LastDateTimeField):
+
+    def __init__(self, auto_now=False, **kwargs):
+        super(CreatingDateTimeField, self).__init__(auto_now=False, **kwargs)
 
 
 #South stuff:
