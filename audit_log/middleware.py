@@ -23,6 +23,7 @@ def _enable_audit_log_managers(instance):
         except AttributeError:
             pass
 
+
 class UserLoggingMiddleware(object):
     def process_request(self, request):
         if settings.DISABLE_AUDIT_LOG:
@@ -30,12 +31,9 @@ class UserLoggingMiddleware(object):
         if not request.method in ('GET', 'HEAD', 'OPTIONS', 'TRACE'):
             if hasattr(request, 'user') and request.user.is_authenticated():
                 user = request.user
-
             else:
                 user = None
-
             session = request.session.session_key
-
             update_pre_save_info = curry(self._update_pre_save_info, user, session)
             update_post_save_info = curry(self._update_post_save_info, user, session)
             signals.pre_save.connect(update_pre_save_info,  dispatch_uid = (self.__class__, request,), weak = False)
@@ -48,6 +46,12 @@ class UserLoggingMiddleware(object):
         signals.post_save.disconnect(dispatch_uid =  (self.__class__, request,))
         return response
 
+    def process_exception(self, request, exception):
+        if settings.DISABLE_AUDIT_LOG:
+            return None
+        signals.pre_save.disconnect(dispatch_uid =  (self.__class__, request,))
+        signals.post_save.disconnect(dispatch_uid =  (self.__class__, request,))
+        return None
 
     def _update_pre_save_info(self, user, session, sender, instance, **kwargs):
         registry = registration.FieldRegistry(fields.LastUserField)
@@ -88,3 +92,40 @@ class UserLoggingMiddleware(object):
                     _disable_audit_log_managers(instance)
                     instance.save()
                     _enable_audit_log_managers(instance)
+
+
+
+
+
+class JWTAuthMiddleware(object):
+    """
+    Convenience middleware for users of django-rest-framework-jwt.
+    Fixes issue https://github.com/GetBlimp/django-rest-framework-jwt/issues/45
+    """
+
+
+    def get_user_jwt(self, request):
+        from rest_framework.request import Request
+        from rest_framework.exceptions import AuthenticationFailed
+        from django.utils.functional import SimpleLazyObject
+        from django.contrib.auth.middleware import get_user
+        from rest_framework_jwt.authentication import JSONWebTokenAuthentication
+
+        user = get_user(request)
+        if user.is_authenticated():
+            return user
+        try:
+            user_jwt = JSONWebTokenAuthentication().authenticate(Request(request))
+            if user_jwt is not None:
+                return user_jwt[0]
+        except AuthenticationFailed:
+            pass
+        return user
+
+    def process_request(self, request):
+        from django.utils.functional import SimpleLazyObject
+        assert hasattr(request, 'session'),\
+        """The Django authentication middleware requires session middleware to be installed.
+         Edit your MIDDLEWARE_CLASSES setting to insert 'django.contrib.sessions.middleware.SessionMiddleware'."""
+
+        request.user = SimpleLazyObject(lambda: self.get_user_jwt(request))
