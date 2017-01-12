@@ -18,5 +18,11 @@ class FieldRegistry(object):
         return fields
 
     def __contains__(self, model):
-        return not len(set([model, model.__bases__]) & set(self.__class__._registry.setdefault(self._fieldcls, {})))
+        fields = set(self.__class__._registry.setdefault(self._fieldcls, {}))
+        models = {model, model.__bases__}
+        for m in models:
+            if m in fields:
+                return True
+        return False
+
 
