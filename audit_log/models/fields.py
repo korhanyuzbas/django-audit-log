@@ -9,10 +9,10 @@ class LastUserField(models.ForeignKey):
     A field that keeps the last user that saved an instance
     of a model. None will be the value for AnonymousUser.
     """
-    
-    def __init__(self, to = getattr(settings, 'AUTH_USER_MODEL', 'auth.User'), null = True, editable = False,  **kwargs):
-        super(LastUserField, self).__init__(to = to, null = null, editable = editable, **kwargs)
-    
+
+    def __init__(self, to=getattr(settings, 'AUTH_USER_MODEL', 'auth.User'), null=True, editable=False, **kwargs):
+        super(LastUserField, self).__init__(to=to, null=null, editable=editable, **kwargs)
+
     def contribute_to_class(self, cls, name):
         super(LastUserField, self).contribute_to_class(cls, name)
         registry = registration.FieldRegistry(self.__class__)
@@ -23,10 +23,10 @@ class LastSessionKeyField(models.CharField):
     """
     A field that keeps a reference to the last session key that was used to access the model.
     """
-    
-    def __init__(self, max_length  = 40, null = True, editable = False,  **kwargs):
-        super(LastSessionKeyField, self).__init__(max_length = 40, null = null, editable = editable, **kwargs)
-    
+
+    def __init__(self, max_length=40, null=True, editable=False, **kwargs):
+        super(LastSessionKeyField, self).__init__(max_length=40, null=null, editable=editable, **kwargs)
+
     def contribute_to_class(self, cls, name):
         super(LastSessionKeyField, self).contribute_to_class(cls, name)
         registry = registration.FieldRegistry(self.__class__)
@@ -38,8 +38,10 @@ class LastDateTimeField(models.DateTimeField):
     A field that keeps last update date time of the model.
     """
 
-    def __init__(self, null=True, auto_now=True, editable = False, **kwargs):
-        super(LastDateTimeField, self).__init__(null = null, auto_now=auto_now, editable = editable, **kwargs)
+    def __init__(self, null=True, auto_now=True, auto_now_add=False, editable=False, **kwargs):
+        super(LastDateTimeField, self).__init__(
+            null=null, auto_now=auto_now, auto_now_add=auto_now_add, editable=editable, **kwargs
+        )
 
     def contribute_to_class(self, cls, name):
         super(LastDateTimeField, self).contribute_to_class(cls, name)
@@ -52,8 +54,8 @@ class CreatingUserField(LastUserField):
     A field that keeps track of the user that created a model instance.
     This will only be set once upon an INSERT in the database.
     """
-    #dont actually need to do anything, everything is handled by the parent class
-    #the different logic goes in the middleware
+    # dont actually need to do anything, everything is handled by the parent class
+    # the different logic goes in the middleware
     pass
 
 
@@ -62,28 +64,29 @@ class CreatingSessionKeyField(LastSessionKeyField):
     A field that keeps track of the last session key with which a model instance was created.
     This will only be set once upon an INSERT in the database.
     """
-    #dont actually need to do anything, everything is handled by the parent class
-    #the different logic goes in the middleware
+    # dont actually need to do anything, everything is handled by the parent class
+    # the different logic goes in the middleware
     pass
 
 
 class CreatingDateTimeField(LastDateTimeField):
 
-    def __init__(self, auto_now=False, **kwargs):
-        super(CreatingDateTimeField, self).__init__(auto_now=False, **kwargs)
+    def __init__(self, auto_now=False, auto_now_add=True, **kwargs):
+        super(CreatingDateTimeField, self).__init__(auto_now=auto_now, auto_now_add=auto_now_add, **kwargs)
 
 
-#South stuff:
+# South stuff:
 
 rules = [((LastUserField, CreatingUserField),
-    [],    
-    {   
-        'to': ['rel.to', {'default': getattr(settings, 'AUTH_USER_MODEL', 'auth.User')}],
-        'null': ['null', {'default': True}],
-    },)]
+          [],
+          {
+              'to': ['rel.to', {'default': getattr(settings, 'AUTH_USER_MODEL', 'auth.User')}],
+              'null': ['null', {'default': True}],
+          },)]
 
 try:
     from south.modelsinspector import add_introspection_rules
+
     # Add the rules for the `LastUserField`
     add_introspection_rules(rules, ['^audit_log\.models\.fields\.LastUserField'])
     add_introspection_rules(rules, ['^audit_log\.models\.fields\.CreatingUserField'])
